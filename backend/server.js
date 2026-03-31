@@ -1,4 +1,4 @@
-// server.js - FINAL DEPLOYABLE VERSION
+// server.js - FINAL PRODUCTION VERSION
 
 require("dotenv").config();
 
@@ -40,13 +40,6 @@ if (process.env.GROQ_API_KEY && Groq) {
     apiKey: process.env.GROQ_API_KEY,
   });
 }
-
-// ─────────────────────────────────────────────
-// ROOT ROUTE (fix "Cannot GET /")
-// ─────────────────────────────────────────────
-app.get("/", (req, res) => {
-  res.send("🚀 AI Code Editor Backend is running!");
-});
 
 // ─────────────────────────────────────────────
 // HEALTH CHECK
@@ -102,7 +95,7 @@ ${code}
 });
 
 // ─────────────────────────────────────────────
-// RUN CODE (FIXED VERSION)
+// RUN CODE (Piston + Local Fallback)
 // ─────────────────────────────────────────────
 app.post("/api/run", async (req, res) => {
   const { code, language } = req.body;
@@ -111,7 +104,7 @@ app.post("/api/run", async (req, res) => {
     return res.status(400).json({ output: "No code provided" });
   }
 
-  // 🔹 STEP 1: TRY PISTON (if available)
+  // 🔹 TRY PISTON
   try {
     const response = await axios.post(PISTON_URL, {
       language,
@@ -127,10 +120,10 @@ app.post("/api/run", async (req, res) => {
     });
 
   } catch (err) {
-    console.log("⚠️ Piston not working → switching to local execution");
+    console.log("⚠️ Piston failed → using local execution");
   }
 
-  // 🔹 STEP 2: LOCAL EXECUTION (JS + PYTHON)
+  // 🔹 LOCAL EXECUTION
   try {
     if (language === "javascript") {
       fs.writeFileSync("temp.js", code);
@@ -166,13 +159,14 @@ app.post("/api/run", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// SERVE FRONTEND (FOR SINGLE DEPLOY)
+// SERVE FRONTEND (IMPORTANT)
 // ─────────────────────────────────────────────
 const frontendPath = path.join(__dirname, "../frontend/dist");
 
 if (fs.existsSync(frontendPath)) {
   app.use(express.static(frontendPath));
 
+  // MUST BE LAST ROUTE
   app.get("*", (req, res) => {
     res.sendFile(path.join(frontendPath, "index.html"));
   });
