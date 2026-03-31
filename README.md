@@ -1,6 +1,7 @@
 # &lt;CodeAI /&gt; — AI-Powered Code Editor
 
 A sleek, browser-based code editor with integrated AI code review powered by **Groq** and live code execution for JavaScript and Python.
+
 [Kindly Note: The main project is the code editor , managed and hosted by the users. If the User wishes to review using AI , they can opt for 
 Groq API which is provided to enhance the project. THE API DOES NOT CONTRIBUTE TO THE CORE FUNCTIONALITY OF THE PROJECT]
 
