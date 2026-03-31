@@ -1,73 +1,102 @@
-// ReviewPanel.jsx — Displays the AI review output
-// Handles three states: empty (waiting), loading, and result (success/error).
-
 import React from 'react'
-import ReactMarkdown from 'react-markdown'
 
-/**
- * Props:
- *  - review   {string|null}  The AI-generated markdown review text
- *  - status   {'idle'|'loading'|'error'}
- *  - errorMsg {string}       Error description (only used when status === 'error')
- */
 export default function ReviewPanel({ review, status, errorMsg }) {
-  return (
-    <>
-      {/* Panel header */}
-      <div className="review-panel-header">
-        <div className="review-panel-title">
-          <span>🔍</span>
-          <span>AI Review</span>
+  if (status === 'loading') {
+    return (
+      <div className="review-loading">
+        <div className="review-spinner" />
+        <span className="review-spinner-text">Analyzing code…</span>
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div style={{
+        padding: '16px',
+        background: 'rgba(255, 71, 87, 0.08)',
+        border: '1px solid rgba(255, 71, 87, 0.25)',
+        borderRadius: '6px',
+        color: '#ff4757',
+        fontFamily: 'var(--font-mono)',
+        fontSize: '12px',
+        lineHeight: 1.6,
+      }}>
+        <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          ✕ Error
         </div>
-        <span className="ai-badge">GEMINI</span>
+        {errorMsg || 'Review failed. Please try again.'}
+      </div>
+    )
+  }
+
+  if (!review) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        minHeight: '200px',
+        gap: '12px',
+        color: 'var(--text-muted)',
+        textAlign: 'center',
+        padding: '24px',
+      }}>
+        <div style={{ fontSize: 28, opacity: 0.4 }}>✦</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
+          No review yet
+        </div>
+        <div style={{ fontSize: 12, lineHeight: 1.6, maxWidth: 220 }}>
+          Click <strong style={{ color: 'var(--cyan)' }}>AI Review</strong> to get intelligent feedback on your code.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      fontFamily: 'var(--font-ui)',
+      fontSize: 13,
+      lineHeight: 1.75,
+      color: 'var(--text-secondary)',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 14,
+        paddingBottom: 10,
+        borderBottom: '1px solid var(--border)',
+      }}>
+        <span style={{ color: 'var(--cyan)', fontSize: 14 }}>✦</span>
+        <span style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: 'var(--cyan)',
+        }}>
+          AI Review
+        </span>
+        <span style={{
+          marginLeft: 'auto',
+          fontSize: 10,
+          color: 'var(--text-muted)',
+          fontFamily: 'var(--font-mono)',
+          background: 'var(--bg-elevated)',
+          padding: '2px 7px',
+          borderRadius: 99,
+          border: '1px solid var(--border)',
+        }}>
+          groq
+        </span>
       </div>
 
-      {/* Panel body */}
-      <div className="review-content">
-
-        {/* LOADING STATE — spinner while waiting for Gemini */}
-        {status === 'loading' && (
-          <div className="review-loading">
-            <div className="review-loading-spinner" />
-            <p>Gemini is reviewing your code…</p>
-          </div>
-        )}
-
-        {/* ERROR STATE — show when the API call fails */}
-        {status === 'error' && (
-          <div className="review-error">
-            <div className="review-error-title">
-              <span>⚠️</span>
-              <span>Review Failed</span>
-            </div>
-            <p>{errorMsg || 'An unexpected error occurred. Please try again.'}</p>
-          </div>
-        )}
-
-        {/* RESULT STATE — render Gemini markdown response */}
-        {status === 'idle' && review && (
-          <div className="review-markdown">
-            {/*
-              react-markdown safely renders the Gemini response as formatted HTML.
-              This gives us headers, code blocks, bullet lists etc.
-            */}
-            <ReactMarkdown>{review}</ReactMarkdown>
-          </div>
-        )}
-
-        {/* EMPTY STATE — before user clicks Review */}
-        {status === 'idle' && !review && (
-          <div className="review-empty">
-            <div className="review-empty-icon">💡</div>
-            <h3>Ready to Review</h3>
-            <p>
-              Write or paste your code in the editor, then click{' '}
-              <strong>✨ Review Code</strong> to get AI feedback.
-            </p>
-          </div>
-        )}
-
+      <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        {review}
       </div>
-    </>
+    </div>
   )
 }
