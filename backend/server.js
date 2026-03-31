@@ -1,4 +1,4 @@
-// server.js - FINAL PRODUCTION VERSION
+// server.js - FINAL MULTI-LANGUAGE VERSION
 
 require("dotenv").config();
 
@@ -31,7 +31,7 @@ const PISTON_URL =
   process.env.PISTON_API_URL || "http://127.0.0.1:2000/api/v2/execute";
 
 // ─────────────────────────────────────────────
-// GROQ SETUP (OPTIONAL)
+// GROQ SETUP
 // ─────────────────────────────────────────────
 let groq = null;
 
@@ -49,10 +49,10 @@ app.get("/api/health", (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// AI REVIEW ROUTE
+// AI REVIEW
 // ─────────────────────────────────────────────
 app.post("/api/review", async (req, res) => {
-  const { code, language = "javascript" } = req.body;
+  const { code, language } = req.body;
 
   if (!groq) {
     return res.json({
@@ -95,21 +95,22 @@ ${code}
 });
 
 // ─────────────────────────────────────────────
-// RUN CODE (Piston + Local Fallback)
+// RUN CODE (MULTI LANGUAGE + INPUT)
 // ─────────────────────────────────────────────
 app.post("/api/run", async (req, res) => {
-  const { code, language } = req.body;
+  const { code, language, input = "" } = req.body;
 
   if (!code) {
     return res.status(400).json({ output: "No code provided" });
   }
 
-  // 🔹 TRY PISTON
+  // 🔹 TRY PISTON (optional)
   try {
     const response = await axios.post(PISTON_URL, {
       language,
       version: "*",
       files: [{ content: code }],
+      stdin: input,
     });
 
     return res.json({
@@ -119,37 +120,93 @@ app.post("/api/run", async (req, res) => {
         "No output",
     });
 
-  } catch (err) {
+  } catch {
     console.log("⚠️ Piston failed → using local execution");
   }
 
   // 🔹 LOCAL EXECUTION
   try {
+    let command = "";
+
+    // ✅ JAVASCRIPT
     if (language === "javascript") {
       fs.writeFileSync("temp.js", code);
+      command = "node temp.js";
+    }
 
-      exec("node temp.js", (error, stdout, stderr) => {
-        if (error) {
-          return res.json({ output: stderr || error.message });
-        }
-        res.json({ output: stdout });
-      });
-
-    } else if (language === "python") {
+    // ✅ PYTHON
+    else if (language === "python") {
       fs.writeFileSync("temp.py", code);
+      command = "python temp.py";
+    }
 
-      exec("python temp.py", (error, stdout, stderr) => {
-        if (error) {
-          return res.json({ output: stderr || error.message });
+    // ✅ C++
+    else if (language === "cpp") {
+      fs.writeFileSync("temp.cpp", code);
+
+      exec("g++ temp.cpp -o temp.exe", (compileErr) => {
+        if (compileErr) {
+          return res.json({ output: compileErr.message });
         }
-        res.json({ output: stdout });
+
+        const runProcess = exec("temp.exe", (err, stdout, stderr) => {
+          if (err) return res.json({ output: stderr || err.message });
+          res.json({ output: stdout });
+        });
+
+        if (input) runProcess.stdin.write(input + "\n");
+        runProcess.stdin.end();
       });
 
-    } else {
-      res.json({
-        output: "⚠️ Only JavaScript & Python supported",
+      return;
+    }
+
+    // ✅ JAVA
+    else if (language === "java") {
+      fs.writeFileSync("Main.java", code);
+
+      exec("javac Main.java", (compileErr) => {
+        if (compileErr) {
+          return res.json({ output: compileErr.message });
+        }
+
+        const runProcess = exec("java Main", (err, stdout, stderr) => {
+          if (err) return res.json({ output: stderr || err.message });
+          res.json({ output: stdout });
+        });
+
+        if (input) runProcess.stdin.write(input + "\n");
+        runProcess.stdin.end();
+      });
+
+      return;
+    }
+
+    else {
+      return res.json({
+        output: "⚠️ Language not supported",
       });
     }
+
+    // 🔥 RUN JS / PYTHON
+    const process = exec(command, (error, stdout, stderr) => {
+      if (error) {
+        return res.json({
+          output: stderr || error.message,
+        });
+      }
+
+      res.json({
+        output: stdout || "✅ No output",
+      });
+    });
+
+    // ✅ FIXED INPUT (VERY IMPORTANT)
+    if (input) {
+      process.stdin.write(input + "\n");
+    }
+
+    process.stdin.end();
 
   } catch (err) {
     res.status(500).json({
@@ -159,14 +216,13 @@ app.post("/api/run", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// SERVE FRONTEND (IMPORTANT)
+// SERVE FRONTEND
 // ─────────────────────────────────────────────
 const frontendPath = path.join(__dirname, "../frontend/dist");
 
 if (fs.existsSync(frontendPath)) {
   app.use(express.static(frontendPath));
 
-  // MUST BE LAST ROUTE
   app.get("*", (req, res) => {
     res.sendFile(path.join(frontendPath, "index.html"));
   });

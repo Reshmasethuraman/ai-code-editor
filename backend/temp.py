@@ -1,1 +1,2 @@
-print("reshma")
+n = input()
+print(n)
